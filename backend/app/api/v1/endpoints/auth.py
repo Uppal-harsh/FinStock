@@ -44,5 +44,7 @@ async def verify_otp(body: VerifyOTPRequest):
         raise HTTPException(status_code=400, detail=result["error"])
     return {
         "message": "Phone verified successfully",
-        "user": result["user"]
+        "user": result["user"],
+        "access_token": result["access_token"],
+        "token_type": result["token_type"]
     }

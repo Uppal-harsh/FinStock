@@ -4,6 +4,7 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import { ModeToggle } from "@/components/mode-toggle";
 import { MarketTicker } from "@/components/market-ticker";
 import { ThemeProvider } from "@/components/theme-provider";
+import { NavUser } from "@/components/nav-user";
 
 import "./globals.css";
 
@@ -26,7 +27,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <p className="font-[var(--font-space)] text-xl font-bold tracking-tight">Financial Forensics AI</p>
                 <p className="mt-1 text-xs text-muted">NSE/BSE Intelligence Platform</p>
               </div>
-              <ModeToggle />
+              <div className="flex items-center gap-3">
+                <NavUser />
+                <ModeToggle />
+              </div>
             </div>
             <MarketTicker />
           </header>

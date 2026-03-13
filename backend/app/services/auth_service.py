@@ -1,8 +1,13 @@
+import jwt
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Optional
 
 from twilio.rest import Client
+from app.core.config import get_settings
+
+settings = get_settings()
 
 # Reuse the same DB your project already uses
 DB_PATH = os.path.join(os.path.dirname(__file__), "../../financial_forensics.db")
@@ -37,13 +42,25 @@ def _ensure_users_table():
 class AuthService:
     def __init__(self):
         _ensure_users_table()
-        self.twilio = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        self.twilio = Client(settings.twilio_account_sid if hasattr(settings, 'twilio_account_sid') else os.getenv("TWILIO_ACCOUNT_SID"), 
+                             settings.twilio_auth_token if hasattr(settings, 'twilio_auth_token') else os.getenv("TWILIO_AUTH_TOKEN"))
+        self.verify_sid = settings.twilio_verify_sid if hasattr(settings, 'twilio_verify_sid') else os.getenv("TWILIO_VERIFY_SID")
+
+    def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None):
+        to_encode = data.copy()
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(minutes=settings.jwt_expiry_minutes)
+        to_encode.update({"exp": expire})
+        encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+        return encoded_jwt
 
     async def send_otp(self, phone_number: str) -> dict:
         """Send OTP via Twilio Verify."""
         try:
             self.twilio.verify.v2.services(
-                TWILIO_VERIFY_SID
+                self.verify_sid
             ).verifications.create(
                 to=phone_number,
                 channel="sms"
@@ -57,7 +74,7 @@ class AuthService:
         # 1. Verify OTP
         try:
             check = self.twilio.verify.v2.services(
-                TWILIO_VERIFY_SID
+                self.verify_sid
             ).verification_checks.create(
                 to=phone_number,
                 code=otp
@@ -85,14 +102,20 @@ class AuthService:
             ).fetchone()
             conn.close()
 
+            user = {
+                "id": row["id"],
+                "phone_number": row["phone_number"],
+                "is_verified": bool(row["is_verified"]),
+                "created_at": row["created_at"],
+            }
+            
+            access_token = self.create_access_token(data={"sub": str(user["id"]), "phone": user["phone_number"]})
+
             return {
                 "success": True,
-                "user": {
-                    "id": row["id"],
-                    "phone_number": row["phone_number"],
-                    "is_verified": bool(row["is_verified"]),
-                    "created_at": row["created_at"],
-                }
+                "user": user,
+                "access_token": access_token,
+                "token_type": "bearer"
             }
         except Exception as e:
             return {"success": False, "error": str(e)}

@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     s3_endpoint: str = "https://files.massive.com"
     s3_bucket: str = "flatfiles"
 
+    jwt_secret: str = "super-secret-key-change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expiry_minutes: int = 1440
+
     cache_ttl_seconds: int = 180
 
 
