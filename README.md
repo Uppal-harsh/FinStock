@@ -236,7 +236,7 @@ GROWW_TOTP_SECRET=your_secret
 
 **AI**
 
-* Gemini API
+* Gemini-API
 
 **Infrastructure**
 
